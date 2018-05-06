@@ -38,6 +38,8 @@ class PyConstantExpression : PyInspection() {
                     handlePyBoolLiteralExpression(unpackedExpression)
                 unpackedExpression.isNumericExpression ->
                     handlePyBinaryExpression(unpackedExpression as PyBinaryExpression)
+                unpackedExpression.isLogicalExpression ->
+                    handleLogicalExpression(unpackedExpression!!)
                 else -> null
             }
         }
@@ -69,6 +71,28 @@ class PyConstantExpression : PyInspection() {
             }
             return null
         }
+
+        private fun handleLogicalExpression(expression: PyExpression): Boolean? {
+            if (expression is PyPrefixExpression && expression.operator == PyTokenTypes.NOT_KEYWORD) {
+                val result = processConstantExpression(expression.operand) ?: return null
+                return !result
+            }
+            if (expression is PyBinaryExpression) {
+                val leftExpression = expression.leftExpression.unpacked ?: return null
+                val rightExpression = expression.rightExpression.unpacked ?: return null
+                if (leftExpression.isLogicalExpressionOperand && rightExpression.isLogicalExpressionOperand) {
+                    val leftValue = processConstantExpression(leftExpression) ?: return null
+                    val rightValue = processConstantExpression(rightExpression) ?: return null
+
+                    return when (expression.operator) {
+                        PyTokenTypes.AND_KEYWORD -> leftValue && rightValue
+                        PyTokenTypes.OR_KEYWORD -> leftValue || rightValue
+                        else -> null
+                    }
+                }
+            }
+            return null
+        }
     }
 }
 
@@ -88,3 +112,11 @@ val PyExpression?.isNumericExpression get() =
                                        this.operator == PyTokenTypes.EQEQ ||
                                        this.operator == PyTokenTypes.NE ||
                                        this.operator == PyTokenTypes.NE_OLD)
+
+val PyExpression?.isLogicalExpression get() =
+        (this is PyPrefixExpression && this.operator == PyTokenTypes.NOT_KEYWORD) ||
+        (this is PyBinaryExpression && (this.operator == PyTokenTypes.AND_KEYWORD ||
+                                        this.operator == PyTokenTypes.OR_KEYWORD))
+
+val PyExpression?.isLogicalExpressionOperand get() =
+        this is PyBoolLiteralExpression || this.isLogicalExpression || this.isNumericExpression
