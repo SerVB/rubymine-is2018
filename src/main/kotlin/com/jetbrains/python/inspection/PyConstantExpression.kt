@@ -27,11 +27,11 @@ class PyConstantExpression : PyInspection() {
 
         private fun processIfPart(pyIfPart: PyIfPart) {
             val condition = pyIfPart.condition
-            val result = processConstantExpression(condition) ?: return
+            val result = processBooleanConstantExpression(condition) ?: return
             registerProblem(condition, "The condition is always $result")
         }
 
-        private fun processConstantExpression(expression: PyExpression?): Boolean? {
+        private fun processBooleanConstantExpression(expression: PyExpression?): Boolean? {
             val unpackedExpression = expression.unpacked
             return when {
                 unpackedExpression is PyBoolLiteralExpression ->
@@ -79,7 +79,7 @@ class PyConstantExpression : PyInspection() {
         }
 
         private fun handleBooleanPrefixExpression(expression: PyPrefixExpression): Boolean? {
-            val result = processConstantExpression(expression.operand) ?: return null
+            val result = processBooleanConstantExpression(expression.operand) ?: return null
             return !result
         }
 
@@ -88,8 +88,8 @@ class PyConstantExpression : PyInspection() {
             val rightExpression = expression.rightExpression.unpacked ?: return null
 
             if (leftExpression.isBooleanOperand && rightExpression.isBooleanOperand) {
-                val leftValue = processConstantExpression(leftExpression) ?: return null
-                val rightValue = processConstantExpression(rightExpression) ?: return null
+                val leftValue = processBooleanConstantExpression(leftExpression) ?: return null
+                val rightValue = processBooleanConstantExpression(rightExpression) ?: return null
 
                 return when (expression.operator) {
                     PyTokenTypes.AND_KEYWORD -> leftValue && rightValue
@@ -120,7 +120,7 @@ val PyExpression?.isBooleanBinaryNumericExpression get() =
                                        this.operator == PyTokenTypes.NE_OLD)
 
 val PyExpression?.isBooleanPrefixExpression get() =
-    this is PyPrefixExpression && this.operator == PyTokenTypes.NOT_KEYWORD
+        this is PyPrefixExpression && this.operator == PyTokenTypes.NOT_KEYWORD
 
 val PyExpression?.isBooleanBinaryBooleanExpression get() =
         this is PyBinaryExpression && (this.operator == PyTokenTypes.AND_KEYWORD ||
