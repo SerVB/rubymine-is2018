@@ -46,7 +46,7 @@ class PyConstantExpression : PyInspection() {
 
             if (leftExpression is PyNumericLiteralExpression && rightExpression is PyNumericLiteralExpression) {
                 if (leftExpression.isIntegerLiteral && rightExpression.isIntegerLiteral) {
-                    /* TODO: Can leftExpression be null if it is already integer integral?
+                    /* TODO: Can leftExpression be null if it is already integer literal?
                        Maybe it is more correct to write this:
                        val leftValue = leftExpression.bigIntegerValue!! */
                     val leftValue = leftExpression.bigIntegerValue ?: return
