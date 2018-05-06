@@ -1,6 +1,6 @@
-if (True):
+if (True):  # The condition is always true
     pass
-if ((False)):
+if ((False)):  # The condition is always false
     pass
-if (3 > 5):
+if (3 > 5):  # The condition is always false
     pass
