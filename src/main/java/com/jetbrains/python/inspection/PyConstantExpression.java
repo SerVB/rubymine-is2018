@@ -1,5 +1,6 @@
 package com.jetbrains.python.inspection;
 
+/*
 import com.intellij.codeInspection.LocalInspectionToolSession;
 import com.intellij.codeInspection.ProblemsHolder;
 import com.intellij.psi.PsiElementVisitor;
@@ -40,4 +41,4 @@ public class PyConstantExpression extends PyInspection {
             }
         }
     }
-}
+}*/
