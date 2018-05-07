@@ -32,23 +32,20 @@ fun handleNumericLiteral(expression: PyNumericLiteralExpression): BigInteger? {
 }
 
 fun handleNumericBinaryNumericExpression(expression: PyBinaryExpression): BigInteger? {
-    val leftExpression = expression.leftExpression.unpacked ?: return null
-    val rightExpression = expression.rightExpression.unpacked ?: return null
+    val leftExpression = expression.leftExpression ?: return null
+    val rightExpression = expression.rightExpression ?: return null
 
-    if (leftExpression.isNumericOperand && rightExpression.isNumericOperand) {
-        val leftValue = processNumericConstantExpression(leftExpression) ?: return null
-        val rightValue = processNumericConstantExpression(rightExpression) ?: return null
+    val leftValue = processNumericConstantExpression(leftExpression) ?: return null
+    val rightValue = processNumericConstantExpression(rightExpression) ?: return null
 
-        return when (expression.operator) {
-            PyTokenTypes.PLUS -> leftValue + rightValue
-            PyTokenTypes.MINUS -> leftValue - rightValue
-            PyTokenTypes.MULT -> leftValue * rightValue
-            PyTokenTypes.FLOORDIV -> leftValue / rightValue
-            PyTokenTypes.PERC -> leftValue % rightValue
-            else -> null
-        }
+    return when (expression.operator) {
+        PyTokenTypes.PLUS -> leftValue + rightValue
+        PyTokenTypes.MINUS -> leftValue - rightValue
+        PyTokenTypes.MULT -> leftValue * rightValue
+        PyTokenTypes.FLOORDIV -> leftValue / rightValue
+        PyTokenTypes.PERC -> leftValue % rightValue
+        else -> null
     }
-    return null
 }
 
 fun handleNumericPrefixExpression(expression: PyPrefixExpression): BigInteger? {
@@ -70,7 +67,3 @@ val PyExpression?.isNumericBinaryNumericExpression get() =
 val PyExpression?.isNumericPrefixExpression get() =
     this is PyPrefixExpression && (this.operator == PyTokenTypes.PLUS ||
                                    this.operator == PyTokenTypes.MINUS)
-
-val PyExpression?.isNumericOperand get() =
-    this is PyNumericLiteralExpression || this.isNumericBinaryNumericExpression ||
-    this.isNumericPrefixExpression

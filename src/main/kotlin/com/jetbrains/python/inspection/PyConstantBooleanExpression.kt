@@ -24,8 +24,8 @@ fun processBooleanConstantExpression(expression: PyExpression?): Boolean? {
 fun handleBooleanLiteral(expression: PyBoolLiteralExpression) = expression.value
 
 fun handleBooleanBinaryNumericExpression(expression: PyBinaryExpression): Boolean? {
-    val leftExpression = expression.leftExpression.unpacked ?: return null
-    val rightExpression = expression.rightExpression.unpacked ?: return null
+    val leftExpression = expression.leftExpression ?: return null
+    val rightExpression = expression.rightExpression ?: return null
 
     val leftValue = processNumericConstantExpression(leftExpression) ?: return null
     val rightValue = processNumericConstantExpression(rightExpression) ?: return null
@@ -43,24 +43,24 @@ fun handleBooleanBinaryNumericExpression(expression: PyBinaryExpression): Boolea
 
 fun handleBooleanPrefixExpression(expression: PyPrefixExpression): Boolean? {
     val result = processBooleanConstantExpression(expression.operand) ?: return null
-    return !result
+    if (expression.operator == PyTokenTypes.NOT_KEYWORD) {
+        return !result
+    }
+    return null
 }
 
 fun handleBooleanBinaryBooleanExpression(expression: PyBinaryExpression): Boolean? {
-    val leftExpression = expression.leftExpression.unpacked ?: return null
-    val rightExpression = expression.rightExpression.unpacked ?: return null
+    val leftExpression = expression.leftExpression ?: return null
+    val rightExpression = expression.rightExpression ?: return null
 
-    if (leftExpression.isBooleanOperand && rightExpression.isBooleanOperand) {
-        val leftValue = processBooleanConstantExpression(leftExpression) ?: return null
-        val rightValue = processBooleanConstantExpression(rightExpression) ?: return null
+    val leftValue = processBooleanConstantExpression(leftExpression) ?: return null
+    val rightValue = processBooleanConstantExpression(rightExpression) ?: return null
 
-        return when (expression.operator) {
-            PyTokenTypes.AND_KEYWORD -> leftValue && rightValue
-            PyTokenTypes.OR_KEYWORD -> leftValue || rightValue
-            else -> null
-        }
+    return when (expression.operator) {
+        PyTokenTypes.AND_KEYWORD -> leftValue && rightValue
+        PyTokenTypes.OR_KEYWORD -> leftValue || rightValue
+        else -> null
     }
-    return null
 }
 
 val PyExpression?.isBooleanBinaryNumericExpression get() =
@@ -78,7 +78,3 @@ val PyExpression?.isBooleanPrefixExpression get() =
 val PyExpression?.isBooleanBinaryBooleanExpression get() =
     this is PyBinaryExpression && (this.operator == PyTokenTypes.AND_KEYWORD ||
                                    this.operator == PyTokenTypes.OR_KEYWORD)
-
-val PyExpression?.isBooleanOperand get() =
-    this is PyBoolLiteralExpression || this.isBooleanBinaryNumericExpression ||
-    this.isBooleanPrefixExpression || this.isBooleanBinaryBooleanExpression

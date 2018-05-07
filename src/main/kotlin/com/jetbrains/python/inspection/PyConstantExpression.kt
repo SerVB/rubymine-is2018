@@ -33,9 +33,9 @@ class PyConstantExpression : PyInspection() {
 }
 
 val PyExpression?.unpacked: PyExpression? get() {
-    var answer = this
-    while (answer is PyParenthesizedExpression) {
-        answer = answer.containedExpression
+    var expression = this
+    while (expression is PyParenthesizedExpression) {
+        expression = expression.containedExpression
     }
-    return answer
+    return expression
 }
