@@ -4,6 +4,7 @@ import com.jetbrains.python.PyTokenTypes
 import com.jetbrains.python.psi.PyBinaryExpression
 import com.jetbrains.python.psi.PyExpression
 import com.jetbrains.python.psi.PyNumericLiteralExpression
+import com.jetbrains.python.psi.PyPrefixExpression
 import java.math.BigInteger
 
 fun processNumericConstantExpression(expression: PyExpression?): BigInteger? {
@@ -13,6 +14,8 @@ fun processNumericConstantExpression(expression: PyExpression?): BigInteger? {
             handleNumericLiteral(unpackedExpression)
         unpackedExpression.isNumericBinaryNumericExpression ->
             handleNumericBinaryNumericExpression(unpackedExpression as PyBinaryExpression)
+        unpackedExpression.isNumericPrefixExpression ->
+            handleNumericPrefixExpression(unpackedExpression as PyPrefixExpression)
         else -> null
     }
 }
@@ -48,6 +51,15 @@ fun handleNumericBinaryNumericExpression(expression: PyBinaryExpression): BigInt
     return null
 }
 
+fun handleNumericPrefixExpression(expression: PyPrefixExpression): BigInteger? {
+    val result = processNumericConstantExpression(expression.operand) ?: return null
+    return when (expression.operator) {
+        PyTokenTypes.PLUS -> result
+        PyTokenTypes.MINUS -> -result
+        else -> null
+    }
+}
+
 val PyExpression?.isNumericBinaryNumericExpression get() =
     this is PyBinaryExpression && (this.operator == PyTokenTypes.PLUS ||
                                    this.operator == PyTokenTypes.MINUS ||
@@ -55,5 +67,10 @@ val PyExpression?.isNumericBinaryNumericExpression get() =
                                    this.operator == PyTokenTypes.FLOORDIV ||
                                    this.operator == PyTokenTypes.PERC)
 
+val PyExpression?.isNumericPrefixExpression get() =
+    this is PyPrefixExpression && (this.operator == PyTokenTypes.PLUS ||
+                                   this.operator == PyTokenTypes.MINUS)
+
 val PyExpression?.isNumericOperand get() =
-    this is PyNumericLiteralExpression || this.isNumericBinaryNumericExpression
+    this is PyNumericLiteralExpression || this.isNumericBinaryNumericExpression ||
+    this.isNumericPrefixExpression
