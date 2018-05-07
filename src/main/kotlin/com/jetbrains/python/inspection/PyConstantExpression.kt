@@ -7,6 +7,7 @@ import com.jetbrains.python.inspections.PyInspection
 import com.jetbrains.python.inspections.PyInspectionVisitor
 import com.jetbrains.python.PyTokenTypes
 import com.jetbrains.python.psi.*
+import java.math.BigInteger
 
 class PyConstantExpression : PyInspection() {
 
@@ -46,36 +47,52 @@ class PyConstantExpression : PyInspection() {
             }
         }
 
+        private fun processNumericConstantExpression(expression: PyExpression?): BigInteger? {
+            if (expression is PyNumericLiteralExpression) {
+                if (expression.isIntegerLiteral) {
+                    return expression.bigIntegerValue
+                }
+            }
+            if (expression.isNumericBinaryNumericExpression) {
+                val castedExpression = expression as PyBinaryExpression
+                val leftExpression = castedExpression.leftExpression.unpacked ?: return null
+                val rightExpression = castedExpression.rightExpression.unpacked ?: return null
+
+                if (leftExpression.isNumericOperand && rightExpression.isNumericOperand) {
+                    val leftValue = processNumericConstantExpression(leftExpression) ?: return null
+                    val rightValue = processNumericConstantExpression(rightExpression) ?: return null
+
+                    return when (castedExpression.operator) {
+                        PyTokenTypes.PLUS -> leftValue + rightValue
+                        PyTokenTypes.MINUS -> leftValue - rightValue
+                        PyTokenTypes.MULT -> leftValue * rightValue
+                        PyTokenTypes.FLOORDIV -> leftValue / rightValue
+                        PyTokenTypes.PERC -> leftValue % rightValue
+                        else -> null
+                    }
+                }
+            }
+            return null
+        }
+
         private fun handleBooleanLiteral(expression: PyBoolLiteralExpression) = expression.value
 
         private fun handleBooleanBinaryNumericExpression(expression: PyBinaryExpression): Boolean? {
             val leftExpression = expression.leftExpression.unpacked ?: return null
             val rightExpression = expression.rightExpression.unpacked ?: return null
 
-            if (leftExpression is PyNumericLiteralExpression && rightExpression is PyNumericLiteralExpression) {
-                /* TODO: The following check can be omitted if bigDecimalValue is used.
-                   Also it will add Python float support.
-                   But there can be some problems with Python float and BigDecimal precision incapability.
-                   Is it needed? */
-                if (leftExpression.isIntegerLiteral && rightExpression.isIntegerLiteral) {
-                    /* TODO: Can leftExpression be null if it is already integer literal?
-                       Maybe it is more correct to write this:
-                       val leftValue = leftExpression.bigIntegerValue!! */
-                    val leftValue = leftExpression.bigIntegerValue ?: return null
-                    val rightValue = rightExpression.bigIntegerValue ?: return null
+            val leftValue = processNumericConstantExpression(leftExpression) ?: return null
+            val rightValue = processNumericConstantExpression(rightExpression) ?: return null
 
-                    return when (expression.operator) {
-                        PyTokenTypes.LT -> leftValue < rightValue
-                        PyTokenTypes.LE -> leftValue <= rightValue
-                        PyTokenTypes.GT -> leftValue > rightValue
-                        PyTokenTypes.GE -> leftValue >= rightValue
-                        PyTokenTypes.EQEQ -> leftValue == rightValue
-                        PyTokenTypes.NE, PyTokenTypes.NE_OLD -> leftValue != rightValue
-                        else -> null
-                    }
-                }
+            return when (expression.operator) {
+                PyTokenTypes.LT -> leftValue < rightValue
+                PyTokenTypes.LE -> leftValue <= rightValue
+                PyTokenTypes.GT -> leftValue > rightValue
+                PyTokenTypes.GE -> leftValue >= rightValue
+                PyTokenTypes.EQEQ -> leftValue == rightValue
+                PyTokenTypes.NE, PyTokenTypes.NE_OLD -> leftValue != rightValue
+                else -> null
             }
-            return null
         }
 
         private fun handleBooleanPrefixExpression(expression: PyPrefixExpression): Boolean? {
@@ -129,3 +146,13 @@ val PyExpression?.isBooleanBinaryBooleanExpression get() =
 val PyExpression?.isBooleanOperand get() =
         this is PyBoolLiteralExpression || this.isBooleanBinaryNumericExpression ||
         this.isBooleanPrefixExpression || this.isBooleanBinaryBooleanExpression
+
+val PyExpression?.isNumericBinaryNumericExpression get() =
+        this is PyBinaryExpression && (this.operator == PyTokenTypes.PLUS ||
+                                       this.operator == PyTokenTypes.MINUS ||
+                                       this.operator == PyTokenTypes.MULT ||
+                                       this.operator == PyTokenTypes.FLOORDIV ||
+                                       this.operator == PyTokenTypes.PERC)
+
+val PyExpression?.isNumericOperand get() =
+        this is PyNumericLiteralExpression || this.isNumericBinaryNumericExpression
